@@ -1,0 +1,409 @@
+---
+title: "MidtermProject"
+author: "Jiun Lee"
+date: "2022-11-30"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+data <- read.csv("/Users/jiunlee/MSSP22/MA678/Projects/Midterm-Project/ESS10.csv")
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(lme4)
+library(rstanarm)
+
+```
+
+##data cleaning
+```{r}
+#selecting columns
+data2 <- data %>%
+dplyr::select(c(idno,cntry,happy,health,imprich,ipmodst,impsafe,ipfrule,stfmjob))
+##Let's remove NA in column Value.
+# aa <- which(data2$netusoft >= 7)
+# b <- 1:nrow(data2)
+# cc <- setdiff(b, aa)
+# data2 <- data2 %>% slice(cc)
+
+# aa <- which(data2$pplfair > 10)
+# b <- 1:nrow(data2)
+# cc <- setdiff(b, aa)
+# data2 <- data2 %>% slice(cc)
+
+aa <- which(data2$health >=7)
+b <- 1:nrow(data2)
+cc <- setdiff(b, aa)
+data2 <- data2 %>% slice(cc)
+# 
+# aa <- which(data2$stfeco >=77)
+# b <- 1:nrow(data2)
+# cc <- setdiff(b, aa)
+# data2 <- data2 %>% slice(cc)
+# 
+# aa <- which(data2$imprich>=7)
+# b <- 1:nrow(data2)
+# cc <- setdiff(b, aa)
+# data2 <- data2 %>% slice(cc)
+
+aa <- which(data2$ipmodst>=7)
+b <- 1:nrow(data2)
+cc <- setdiff(b, aa)
+data2 <- data2 %>% slice(cc)
+
+aa <- which(data2$impsafe >=7)
+b <- 1:nrow(data2)
+cc <- setdiff(b, aa)
+data2 <- data2 %>% slice(cc)
+
+aa <- which(data2$ipfrule >=7)
+b <- 1:nrow(data2)
+cc <- setdiff(b, aa)
+data2 <- data2 %>% slice(cc)
+
+aa <- which(data2$stfmjob >=66)
+b <- 1:nrow(data2)
+cc <- setdiff(b, aa)
+data2 <- data2 %>% slice(cc)
+
+aa <- which(data2$happy >=77)
+b <- 1:nrow(data2)
+cc <- setdiff(b, aa)
+data2 <- data2 %>% slice(cc)
+
+# 
+# aa <- which(data2$inprdsc >=77)
+# b <- 1:nrow(data2)
+# cc <- setdiff(b, aa)
+# data2 <- data2 %>% slice(cc)
+
+
+#reverse scale(ascending)
+data2$health <- 6- data2$health
+# data2$imprich <- 7 - data2$imprich
+data2$ipmodst <- 7 - data2$ipmodst
+data2$impsafe <- 7 - data2$impsafe
+data2$ipfrule <- 7 - data2$ipfrule
+
+rm(aa,b,cc,cnames,drop_cols,i,T,x)
+```
+
+##EDA
+```{r}
+#Plotting the association of different variables with health within each country
+#response variable:health
+# 
+# ggplot (data2, aes (netusoft,health)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("netusoft") + ylab("Health") +
+#   facet_wrap( ~ cntry) +
+#   theme(panel.spacing = unit(0.5, "lines"))+
+#   scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+# 
+# ggplot (data2, aes (pplfair,health)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("pplfair") + ylab("Health") +
+#   facet_wrap( ~ cntry) +
+#   theme(panel.spacing = unit(0.5, "lines"))+
+#   scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+# 
+# ggplot (data2, aes (inprdsc,health)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("inprdsc") + ylab("Health") +
+#   facet_wrap( ~ cntry) +
+#   theme(panel.spacing = unit(0.5, "lines"))+
+#   scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+
+
+ggplot (data2, aes (happy,health)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("Happy") + ylab("Health") +
+  facet_wrap( ~ cntry) +
+  theme(panel.spacing = unit(0.5, "lines"))+
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+# 
+# ggplot (data2, aes (stfeco,health)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("stfeco") + ylab("Health") +
+#   facet_wrap( ~ cntry) +
+#   theme(panel.spacing = unit(0.5, "lines"))+
+#   scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+# 
+# ggplot (data2, aes (imprich,health)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("imprich") + ylab("Health") +
+#   facet_wrap( ~ cntry) +
+#   theme(panel.spacing = unit(0.5, "lines"))+
+#   scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+
+ggplot (data2, aes (ipmodst,health)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("Ipmodst") + ylab("Health") +
+  facet_wrap( ~ cntry) +
+  theme(panel.spacing = unit(0.5, "lines"))+
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+
+ggplot (data2, aes (impsafe,health)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("impsafe") + ylab("Health") +
+  facet_wrap( ~ cntry) +
+  theme(panel.spacing = unit(0.5, "lines"))+
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+
+ggplot (data2, aes (ipfrule,health)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("ipfrule") + ylab("Health") +
+  facet_wrap( ~ cntry) +
+  theme(panel.spacing = unit(0.5, "lines"))+
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+
+
+ggplot (data2, aes (stfmjob,health)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("stfmjob") + ylab("Health") +
+  facet_wrap( ~ cntry) +
+  theme(panel.spacing = unit(0.5, "lines"))+
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+
+#response variable:happy
+# ggplot (data2, aes (netusoft,happy)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("netusoft") + ylab("Health") +
+#   facet_wrap( ~ cntry)+scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+# 
+# 
+# ggplot (data2, aes (pplfair,happy)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("pplfair") + ylab("Health") +
+#   facet_wrap( ~ cntry) +scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+# 
+# ggplot (data2, aes (inprdsc,happy)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("inprdsc") + ylab("Happiness") +
+#   facet_wrap( ~ cntry) +
+#   scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+
+ggplot (data2, aes (health,happy)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("Health") + ylab("Happy") +
+  facet_wrap( ~ cntry) +
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+
+# ggplot (data2, aes (stfeco,happy)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("stfeco") + ylab("Happiness") +
+#   facet_wrap( ~ cntry) +
+#   scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+# 
+# ggplot (data2, aes (imprich,happy)) + geom_point(size=0.1) +
+#   stat_smooth(method="lm", fullrange=TRUE) +
+#   xlab("imprich") + ylab("Happiness") +
+#   facet_wrap( ~ cntry) +
+#   scale_x_continuous(breaks = scales::breaks_extended())+
+#   theme(axis.title=element_text(size=12),
+#         axis.text=element_text(size=6),
+#         strip.text=element_text(size=8))
+
+ggplot (data2, aes (ipmodst,happy)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("Ipmodst") + ylab("Happy") +
+  facet_wrap( ~ cntry) +
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+
+ggplot (data2, aes (impsafe,happy)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("Impsafe") + ylab("Happy") +
+  facet_wrap( ~ cntry) +
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+
+ggplot (data2, aes (ipfrule,happy)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("Ipfrule") + ylab("Happy") +
+  facet_wrap( ~ cntry) +
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+
+ggplot (data2, aes (stfmjob,happy)) + geom_point(size=0.1) +
+  stat_smooth(method="lm", fullrange=TRUE) +
+  xlab("Stfmjob") + ylab("Happy") +
+  facet_wrap( ~ cntry) +
+  scale_x_continuous(breaks = scales::breaks_extended())+
+  theme(axis.title=element_text(size=12),
+        axis.text=element_text(size=6),
+        strip.text=element_text(size=8))
+```
+
+##response varible: health
+```{r}
+set.seed(1234)
+
+#random intercept+random slope
+m1 <- stan_lmer(health~stfmjob+happy+impsafe+ipmodst+(1|cntry)+(0+stfmjob|cntry)+(0+happy|cntry)+(0+impsafe|cntry)+(0+ipmodst|cntry),data=data2)
+summary(m1,digits=3)
+coef(m1)
+ranef(m1)#random effects:the estimated group-level errors 
+fixef(m1)#estimated average coefficients
+#ICC
+VarCorr(m1)
+RandomEffects <- as.data.frame(VarCorr(m1))
+RandomEffects
+ICC_int <- RandomEffects[1,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]
+ICC_int #1.531522
+ICC_stfmjob<- RandomEffects[2,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]
+ICC_stfmjob #0.5361391
+ICC_happy  <- RandomEffects[3,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]
+ICC_happy #0.5412589
+ICC_impsafe  <- RandomEffects[4,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]
+ICC_impsafe #0.5625203
+ICC_ipmodst  <- RandomEffects[5,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]
+ICC_ipmodst  #0.5818328
+
+###Intraclass correlation coefficient (ICC)
+# The intraclass correlation coefficient is defined as the ratio of the variance explained by the multilevel structure and the variance of the outcome variable. 
+# In social science, it often ranges from 0.05 to 0.25. When ICC is large, it means the between-class variance cannot be ignored and therefore a multilevel model is preferred. It has been suggested that if ICC > 0.1, one should consider the use of a multilevel model.
+```
+
+#Testing single parameters:MCMC
+```{r}
+posterior <- as.array(m1)
+dim(posterior)
+dimnames(posterior)
+
+#mcmc_intervals, mcmc_areas
+# color_scheme_set("blue")
+mcmc_intervals(posterior, pars = c("stfmjob", "happy", "impsafe", "ipmodst"))
+
+mcmc_areas(
+  posterior, 
+  pars = c("stfmjob", "happy", "impsafe", "ipmodst"),
+  prob = 0.8, # 80% intervals
+  prob_outer = 0.99, # 99%
+  point_est = "mean")+
+  labs(
+  title = "Posterior distributions",
+  subtitle = "The mean and 80% intervals")
+
+
+#mcmc_dens_overlay
+mcmc_dens_overlay(posterior, pars = c("stfmjob", "happy", "impsafe", "ipmodst"))
+
+```
+##response varible: happy
+```{r}
+set.seed(4573)
+#random intercept+random slope
+m2 <- stan_lmer(happy~stfmjob+health+impsafe+ipmodst+ipfrule+(1|cntry)+(0+stfmjob|cntry)+(0+health|cntry)+(0+impsafe|cntry)+(0+ipmodst|cntry)+(0+ipfrule|cntry),data=data2)
+summary(m2,digits=3)
+coef(m2)
+ranef(m2)
+fixef(m2)
+
+#ICC
+VarCorr(m2)
+RandomEffects <- as.data.frame(VarCorr(m2))
+RandomEffects
+ICC_int <- RandomEffects[1,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]+RandomEffects[7,4]
+ICC_int #3.564563
+ICC_stfmjob<- RandomEffects[2,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]+RandomEffects[7,4]
+ICC_stfmjob #2.566859
+ICC_health  <- RandomEffects[3,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]+RandomEffects[7,4]
+ICC_health #2.583978
+ICC_impsafe  <- RandomEffects[4,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]+RandomEffects[7,4]
+ICC_impsafe #2.56716
+ICC_ipmodst  <- RandomEffects[5,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]+RandomEffects[7,4]
+ICC_ipmodst  #2.567771
+ICC_ipfrule  <- RandomEffects[6,4]/RandomEffects[1,4]+RandomEffects[2,4]+RandomEffects[3,4]+RandomEffects[4,4]+RandomEffects[5,4]+RandomEffects[6,4]+RandomEffects[7,4]
+ICC_ipfrule #2.568804
+
+```
+
+
+#Testing single parameters:MCMC
+```{r}
+posterior <- as.array(m2)
+dim(posterior)
+dimnames(posterior)
+
+#mcmc_intervals
+# color_scheme_set("blue")
+mcmc_intervals(posterior, pars = c("stfmjob", "health", "impsafe", "ipmodst","ipfrule"))
+
+#mcmc_areas
+mcmc_areas(
+  posterior, 
+pars = c("stfmjob", "health", "impsafe", "ipmodst","ipfrule"),
+prob = 0.8, # 80% intervals
+  prob_outer = 0.99, # 99%
+  point_est = "mean")+
+  labs(
+  title = "Posterior distributions",
+  subtitle = "The mean and 80% intervals")
+
+#mcmc_dens_overlay
+mcmc_dens_overlay(posterior, pars = c("stfmjob", "health", "impsafe", "ipmodst","ipfrule"))
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
