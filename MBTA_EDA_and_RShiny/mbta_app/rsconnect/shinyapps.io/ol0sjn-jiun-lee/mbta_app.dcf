@@ -1,0 +1,13 @@
+name: mbta_app
+title: mbta_app
+username:
+account: ol0sjn-jiun-lee
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7909345
+bundleId: 6648210
+url: https://ol0sjn-jiun-lee.shinyapps.io/mbta_app/
+when: 1671284001.67287
+lastSyncTime: 1671284001.67287
+asMultiple: FALSE
+asStatic: FALSE

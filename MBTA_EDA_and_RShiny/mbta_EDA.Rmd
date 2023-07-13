@@ -1,0 +1,116 @@
+---
+title: "mbta_EDA"
+author: "Jiun Lee"
+date: "2022-12-17"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+\Large Introduction 
+$\\$
+$\\$
+\normalsize This report is to check the the accuracy of MBTA's departure and arrival time. Using the dataset of travel times between origin and destination pairs in 2021, we will verify if MBTA is reliable enough.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy=TRUE,warning = FALSE)
+library(dplyr)
+library(lubridate)
+#Dataset has data of traveltime of MBTA from October 2021 to December 2021.
+data <- read.csv("/Users/jiunlee/MSSP22/MA615/Projects/Final Project/Travel_Times_2021/LRTravelTimesQ4_21.csv")
+```
+$\\$
+\Large Data Cleaning 
+$\\$
+$\\$
+\normalsize Since it's a large dataset, we will subset the data for 2021-12-01 to 2021-12-07. Also, there are weird travel times under 10 seconds, which has to be removed. 
+```{r, echo=TRUE}
+##Choose only 2021-12-01 ~ 2021-12-07
+df <- data %>%
+  mutate(service_date = lubridate::ymd(service_date)) %>%
+  filter(service_date >= as.Date('2021-12-01') & service_date <= as.Date('2021-12-07'))
+
+r <- which(df$travel_time_sec<10) # remove weird rows. Travel time cannot be under 10 seconds.
+df <- df[-r,]
+
+#remove unnecessary columns
+#rename columns
+df <- df %>% 
+  select(-direction_id) %>%
+  rename(date=service_date,from=from_stop_id, to=to_stop_id, line=route_id, traveltime=travel_time_sec, starttime=start_time_sec,endtime=end_time_sec) %>% group_by(from, to, line)
+head(df)
+
+#make the subset of stops and route with randomly chosen from_stop_id,to_stop_id,route_id.
+sub <- df %>%
+  filter(from == 70110 &
+           to == 170136 &
+           line == "Green-B")
+sub <- as.data.frame(sub)
+
+```
+\normalsize With this subset, we will perform several visualizations.
+$\\$
+$\\$
+$\\$
+$\\$
+\Large Graphs
+$\\$
+$\\$
+\large Histogram
+```{r, echo=FALSE}
+#histogram
+hist(sub$traveltime, xlab = "Travel Time (sec)", 
+main = "Frequency of travel times")
+```
+$\\$\normalsize The histogram is the most basic visualization you can use for EDA. As you can see, the distribution looks like a normal distribution.
+$\\$
+$\\$
+$\\$ \large Normal probability plot 
+$\\$ \normalsize Let's see a normal probability plot to check the normal distribution. 
+
+```{r, echo=FALSE}
+library(qqplotr)
+sub %>% 
+  ggplot(aes(sample=traveltime)) + stat_qq_point(size = 2) +
+  labs(title = "QQplot")
+```
+$\\$ \normalsize The graph is a straight line with a slope of 1, so we can confirm that the dataset is normally distributed.
+$\\$
+$\\$ \large Box Plot 
+```{r, echo=FALSE}
+library(ggplot2)
+sub%>%
+ggplot(aes(x = as.Date(date), y = traveltime, group=date)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Greenline B travel time", x = "Date (2021)",y = "Travel Time (sec)",
+       subtitle = "From stopID 70110 to stopID 170136") +
+  scale_x_date(date_breaks = "1 day", date_label="%b%d") +
+  theme_bw()
+
+#Dec05's travel time looks significantly lower than other days. 
+```
+$\\$\normalsize Let's see the box plot of travel time.
+$\\$\normalsize As the median of Dec05 is significantly lower than other days' medians, we can verify the travel time of Dec 05 generally is faster than usual. This is probably because Dec 05 is Sunday that has less passengers.
+
+$\\$
+$\\$
+$\\$
+$\\$\large Scatter plot 
+$\\$
+$\\$
+\normalsize A scatter plot will be useful to see the difference between Monday and Sunday. $\\$
+```{r, echo=FALSE}
+subMon <- sub[which(sub$date=="2021-12-06"),]
+subSun <- sub[which(sub$date=="2021-12-05"),]
+subMonSun <- rbind(subMon, subSun)
+
+ggplot(subMonSun, aes(starttime, endtime, group=date,
+                           color=date)) +
+  geom_point() +
+  labs(title = "End Time and Start Time", x="Start time (sec) ", 
+       y="End time (sec)",subtitle = "stop 70134 to stop 170136, greenline-B") +
+  guides(color = guide_legend(title = "Date")) +
+  theme_bw()
+```
+
+$\\$\normalsize  Start and end time points of each day are mostly overlapped, gathering into one single line. It means the start and end times are steady, which means MBTA is dependable.
+ $\\$ $\\$
