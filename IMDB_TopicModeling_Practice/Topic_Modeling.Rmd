@@ -1,0 +1,224 @@
+---
+title: "Topic_Modeling"
+author: 'Jiun Lee'
+date: "2022-11-12"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(tidytext)
+library(DescTools)
+library(tokenizers)
+library(readxl)
+```
+
+## Importing Data
+
+```{r}
+##Import Data
+imdb <- read_csv ("IMDB Dataset.csv", 
+                    col_names = TRUE,
+                    show_col_types = FALSE)
+##Remove sentiment column since we don't use it.
+imdb <- imdb %>% select(-sentiment)
+
+##Remove duplicates of review, now we have 49582 observations.
+imdb <- unique(imdb)
+
+##Sample down for 100 reviews
+set.seed(456)
+review_index <- 1:dim(imdb)[1]
+text_df <- cbind(review_index,imdb)
+text_df <- text_df %>% slice_sample(n = 100, replace = FALSE)
+rm(review_index)
+
+#After a thorough cleaning, we now have a random sample of 100 observations data frame
+```
+
+## Cleaning: Tokenizing, Removing stopwords
+
+```{r}
+##The imdb dataset has a lot of stopwords and meaningless words. #We will remove stopwords and words unncessary for guessing movie genre.
+
+library(stringr)
+library(tidytext)
+## Tokenizing, count the number of words within each review.
+token <- text_df %>%
+  unnest_tokens(word, review) %>%
+  count(review_index, word, sort=TRUE) %>%
+  rename(count=n)
+
+##There's a lot of stop words. Let's remove them.
+  
+##Create a stop word vector
+stop <- unlist(stop_words[,1])
+##Drop the attribute
+stop <- StripAttr(stop)
+##Restore tokens Data set
+check <- token
+##Check stop word lists again
+remove <- check$word %in% stop
+##To make it easier to see, create a data frame
+d <- cbind(token,remove)
+##Create an index of words(not stopwords)
+f <- which(d$remove == FALSE)
+##Clean tokens that has no stopwords
+clean_token <- d %>% slice(f) %>% select(-remove)
+
+##Let's subset the Clean_Token
+
+##Vector that has meaningless words
+strings <- c("br","movie","film", "scene", "character","story","bit","lot","bad","act","hard","awful","good","plot","people", "cinema","audience","coburn","cast","heston","jimmy", "fred","worst","sir","time",'original','direction','version','1','2','3','4','5','6','7','8','9','10','effect','version','di','life','le','ryan','titta','henry','woman','idea','house','bela','simply','watch','friend','girl','tom','wife','real','hot','forget','feel','wait','make','pretty','earl','kane','rose','hitchcock','success','courtenay','script','guy','michael','suzanne','amir','ha','screen')
+
+##Detect numbers of rows that has meaningless words
+meaningless <- str_detect(clean_token$word, paste(strings, collapse = "|"))
+
+##Detect numbers of meaningful rows
+meaningful <- which(meaningless==F)
+
+##Subset: tokens without meaningless 
+clean_token <- clean_token %>% slice(meaningful)
+
+##Remove redundant data and values
+rm(d,check,f,meaningless,meaningful,strings,stop,remove,token)
+
+##Now we have our new clean_token data with only 3776 observations
+```
+
+# TF-IDF (Term Frequency - Inverse Document Frequency)
+
+```{r}
+##Let's look tf-idf to see what is the most important words in the whole reviews. 
+review_tf_idf <- clean_token %>%
+  bind_tf_idf(review_index, word, count)
+```
+
+## Look at terms with high tf-idf in reviews.
+
+```{r}
+review_tf_idf<- review_tf_idf %>%
+  arrange(desc(tf_idf))
+head(review_tf_idf,20)
+```
+
+#### High tf-idf's words are identified as words that are important to one document within a collection of documents.
+
+#### tf-idf algorithm will think those are very important words.
+
+## Look at terms with low tf-idf in reviews.
+
+```{r}
+review_tf_idf<- review_tf_idf %>% 
+  arrange(tf_idf)
+head(review_tf_idf,20)
+```
+
+#### The inverse document frequency is very low almost zero for words occuring in many documents; thus tf_idf is very low too. The word 'love' is common in the documents.
+
+## Highest tf-idf words
+
+```{r}
+
+##Let's make the plots with only 6 review_index.
+review_tf_idf %>% 
+  filter(review_index %in% c(25207,5044,5140,28289,25247)) %>%
+  arrange(desc(tf_idf)) %>%
+  group_by(review_index) %>%
+  distinct(word,review_index, .keep_all = TRUE) %>%
+  slice_max(tf_idf, n = 15, with_ties = FALSE) %>% 
+  ungroup() %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  ggplot(aes(tf_idf, word, fill = review_index)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~review_index, ncol = 3, scales = "free") +
+  labs(title = "Highest tf-idf words in 6 reviews",
+       caption = "IMDB Dataset",
+       x = "tf-idf", y = NULL)
+
+```
+
+#### On each 6 plot, we can see top 15 words with high tf-idf.
+
+#### Among them, we can verify some meaningful words for checking their genres.
+
+#### For example, in review'25247', the words 'censorship','erotic','sexuality' imply that the review is about romance movie.
+
+# Latent Dirichelet Allocation model
+
+```{r}
+library(topicmodels)
+
+##Convert sample token tibble to DTM(document term matrix) for LDA
+clean_token_dmat <- clean_token %>%
+  cast_dtm(review_index, word, count)
+
+##Select k= 6 because we have 6 general film genres
+imdb_lda <- LDA(clean_token_dmat, k = 6, control = list(seed = 1234))
+imdb_lda #topic model with 6 topics.
+
+#extracting the Topic Word Matrix (per-topic-per-word probabilities)
+imdb_topics <- tidy(imdb_lda, matrix = "beta")
+imdb_topics
+```
+
+#### Probability of that term being generated from that topic. 
+
+#### For example, the term "timon" has an almost zero probability of being generated from topics 1, 2, or 3, but it makes up 3% of topic 4.
+
+## Visualization: the most common words within each topic.
+
+```{r}
+library(ggplot2)
+##Get top used terms and arrange them
+imdb_top_terms <- imdb_topics %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 6) %>% 
+  ungroup() %>%
+  arrange(topic, -beta)
+
+##Create the plot
+imdb_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
+
+```
+
+#### The plot shows the most common words within each topic.
+
+#### We've split up our LDA into 6 genres, which represents the number of topics we have.
+
+#### Topic 4 has common words such as 'timon', 'pumbaa', 'king', and 'lion'. It represents it's an animation movie 'Lion King".
+
+## Now let's look at Document-topic probabilities.
+
+```{r}
+##Document Topic Matrix (per-document-per-topic probabilities)
+imdb_documents <- tidy(imdb_lda, matrix = "gamma")
+imdb_documents %>%
+  arrange(desc(gamma)) ##descending sort
+```
+
+#### Each document as a mixture of topics.
+
+#### Each of these values is an estimated proportion of words from that document that are generated from that topic. The model estimates that 99% of the words in document 35484 were generated from topic 4.
+
+## Word Assignment: assigning each word in each document to a topic
+
+```{r}
+assignments <- augment(imdb_lda, data = clean_token_dmat)
+assignments
+
+##The assignments tibble above count up the words for each topic. 
+```
+
+#### The document 35484 - term 'timon' pair was assigned to topic 4.
