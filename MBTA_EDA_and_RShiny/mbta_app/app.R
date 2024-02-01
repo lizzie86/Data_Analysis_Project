@@ -31,7 +31,7 @@ ui <- fluidPage(titlePanel("Finding Directions"),
 
 server <- function(input, output, session) {
   
-  api_key <- "AIzaSyChE0hi--akX3aeBFBGkfU7OpNgyhk-e3k"
+  api_key <- ""
   
   output$gmap <- renderGoogle_map({
     google_map(key = api_key,
